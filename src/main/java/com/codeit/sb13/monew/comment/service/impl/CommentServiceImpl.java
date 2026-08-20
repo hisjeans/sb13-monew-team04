@@ -7,14 +7,18 @@ import com.codeit.sb13.monew.comment.repository.CommentRepository;
 import com.codeit.sb13.monew.comment.service.CommentService;
 import com.codeit.sb13.monew.comment.service.dto.CommentDto;
 import com.codeit.sb13.monew.comment.service.dto.CommentRegisterCommand;
+import com.codeit.sb13.monew.global.exception.article.ArticleNotFoundException;
+import com.codeit.sb13.monew.global.exception.user.UserNotFoundException;
 import com.codeit.sb13.monew.user.domain.User;
 import com.codeit.sb13.monew.user.repository.UserRepository;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 
+@Slf4j
 @Validated // 서비스 계층에서도 Bean validation 적용하기 위해 추가
 @RequiredArgsConstructor
 @Service
@@ -29,10 +33,14 @@ public class CommentServiceImpl implements CommentService {
   @Transactional
   @Override
   public CommentDto create(@Valid CommentRegisterCommand command) { // 서비스 전용객체를 사용
-    User user = userRepository.findById(command.userId()).orElseThrow();
-    Article article = articleRepository.findById(command.articleId()).orElseThrow();
-    Comment comment=new Comment(article, user, command.content());
-    Comment saved = commentRepository.save(comment);
-    return CommentDto.from(saved);
+    log.debug("댓글 생성 시작 - 사용자 아이디: {}, 기사 아이디: {}, 댓글 내용: {}", command.userId(), command.articleId(), command.content());
+    User user = userRepository.findById(command.userId()).orElseThrow(()->new UserNotFoundException(command.userId()));
+    Article article = articleRepository.findById(command.articleId()).orElseThrow(()->new ArticleNotFoundException(command.articleId()));
+    Comment comment= Comment.builder()
+        .article(article).user(user).content(command.content())
+        .build();
+    Comment savedComment = commentRepository.save(comment);
+    log.info("댓글 생성 완료 - 댓글 아이디: {}, 사용자 아이디: {}, 기사 아이디: {}", savedComment.getId(), savedComment.getUser().getId(), savedComment.getArticle().getId());
+    return CommentDto.from(savedComment, 0L, false); // 댓글 생성 직후, 좋아요 수는 0, 좋아요 여부는 false로 반환
   }
 }

@@ -10,6 +10,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -30,6 +31,7 @@ public class Comment extends DeletedAtEntity { // DeletedAtEntity를 상속받�
   @Column(nullable = false, length = 500)
   private String content;
 
+  @Builder
   public Comment(Article article, User user, String content) {
     this.article = article;
     this.user = user;
