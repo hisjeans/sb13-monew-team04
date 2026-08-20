@@ -2,6 +2,8 @@ package com.codeit.sb13.monew.comment.controller;
 
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.times;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -32,7 +34,7 @@ public class CommentLikeControllerTest {
   private CommentLikeService commentLikeService;
 
   @Test
-  @DisplayName("댓글 좋아요 등록 - RED")
+  @DisplayName("댓글 좋아요 등록 성공 - GREEN")
   void 댓글_좋아요_등록() throws Exception {
     // given
     Article article = new Article("기사 제목", "기사 요약", "https://test.com/article", LocalDateTime.now(), "기사 출처");
@@ -57,6 +59,9 @@ public class CommentLikeControllerTest {
     ReflectionTestUtils.setField(article, "id", UUID.randomUUID()); // 기사 객체에
     ReflectionTestUtils.setField(comment, "id", UUID.randomUUID()); // 댓글 객체에 id 필드 설정
 
+    LocalDateTime commentCreatedAt = LocalDateTime.now();
+    ReflectionTestUtils.setField(comment, "createdAt", commentCreatedAt); // 댓글 객체에 createdAt 필드 설정
+
     CommentLikeDto response=new CommentLikeDto(
         UUID.randomUUID(),
         likedBy.getId(),
@@ -67,11 +72,11 @@ public class CommentLikeControllerTest {
         comment.getUser().getNickname(),
         comment.getContent(),
         1L,
-        comment.getCreatedAt());
+        commentCreatedAt);
 
     given(commentLikeService.likeComment(argThat(command->command != null
         && comment.getId().equals(command.commentId())
-        && likedBy.getId().equals(command.requestUserId())))).willReturn(response); // 값이 정확히 일치하는 방향만 통과하도록 테스트 수정
+        && likedBy.getId().equals(command.requestUserId())))).willReturn(response);
 
     mockMvc.perform(
             post("/api/comments/{commentId}/comment-likes", comment.getId())
@@ -85,7 +90,12 @@ public class CommentLikeControllerTest {
         .andExpect(jsonPath("$.commentUserId").value(commentUser.getId().toString()))
         .andExpect(jsonPath("$.commentUserNickname").value(commentUser.getNickname()))
         .andExpect(jsonPath("$.commentContent").value(comment.getContent()))
-        .andExpect(jsonPath("$.commentLikeCount").value(1))
-        .andExpect(jsonPath("$.commentCreatedAt").isNotEmpty());
+        .andExpect(jsonPath("$.commentLikeCount").value(response.commentLikeCount()))
+        .andExpect(jsonPath("$.commentCreatedAt").value(commentCreatedAt.toString()));
+
+    then(commentLikeService).should(times(1))
+        .likeComment(argThat(command->
+            comment.getId().equals(command.commentId())
+                && likedBy.getId().equals(command.requestUserId())));
   }
 }
