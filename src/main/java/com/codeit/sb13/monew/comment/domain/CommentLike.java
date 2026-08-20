@@ -9,6 +9,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -38,6 +39,7 @@ public class CommentLike extends CreatedAtEntity {
   @JoinColumn(name = "liked_by", nullable = false)
   private User likedBy;
 
+  @Builder
   public CommentLike(Comment comment, User likedBy) {
     this.comment = comment;
     this.likedBy = likedBy;
