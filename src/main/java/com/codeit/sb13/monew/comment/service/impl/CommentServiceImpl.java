@@ -1,5 +1,7 @@
 package com.codeit.sb13.monew.comment.service.impl;
 
+import com.codeit.sb13.monew.article.domain.Article;
+import com.codeit.sb13.monew.article.repository.ArticleRepository;
 import com.codeit.sb13.monew.comment.domain.Comment;
 import com.codeit.sb13.monew.comment.repository.CommentRepository;
 import com.codeit.sb13.monew.comment.service.CommentService;
@@ -21,13 +23,15 @@ public class CommentServiceImpl implements CommentService {
 
   private final CommentRepository commentRepository;
   private final UserRepository userRepository;
+  private final ArticleRepository articleRepository;
   // TODO: 추후 UserService나 사용자 조회 전용 컴포넌트에 조회 메서드를 두고 해당 서비스를 통해 사용자 정보 가져오도록 변경
 
   @Transactional
   @Override
   public CommentDto create(@Valid CommentRegisterCommand command) { // 서비스 전용객체를 사용
     User user = userRepository.findById(command.userId()).orElseThrow();
-    Comment comment=new Comment(command.articleId(), user, command.content());
+    Article article = articleRepository.findById(command.articleId()).orElseThrow();
+    Comment comment=new Comment(article, user, command.content());
     Comment saved = commentRepository.save(comment);
     return CommentDto.from(saved);
   }

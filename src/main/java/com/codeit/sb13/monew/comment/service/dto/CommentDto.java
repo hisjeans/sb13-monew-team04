@@ -17,7 +17,7 @@ public record CommentDto(
   public static CommentDto from(Comment comment) {
     return new CommentDto(
         comment.getId(),
-        comment.getArticleId(),
+        comment.getArticle().getId(),
         comment.getUser().getId(),
         comment.getUser().getNickname(), // 사용자 도메인과 연동 후 실제 사용자 이름 조회
         comment.getContent(),
