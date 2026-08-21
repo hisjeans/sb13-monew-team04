@@ -32,7 +32,7 @@ public class CommentLikeServiceImpl implements CommentLikeService {
   @Transactional
   @Override
   public CommentLikeDto likeComment(@Valid CommentLikeRegisterCommand command) {
-    log.debug("댓글 좋아요 등록 시작 - 댓글 아이디: {}}", command.commentId());
+    log.debug("댓글 좋아요 등록 시작 - 댓글 아이디: {}", command.commentId());
     Comment comment = commentRepository.findActiveByIdForUpdate(command.commentId()).orElseThrow(()-> new CommentNotFoundException(command.commentId()));
     User likedBy = userRepository.findById(command.requestUserId()).orElseThrow(()->new UserNotFoundException(command.requestUserId()));
 
