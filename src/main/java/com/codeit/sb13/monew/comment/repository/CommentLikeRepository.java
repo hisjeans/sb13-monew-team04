@@ -15,7 +15,9 @@ public interface CommentLikeRepository extends JpaRepository<CommentLike, UUID> 
       select cl
       from CommentLike cl
       join fetch cl.comment c
+      join fetch c.article
       join fetch c.user
+      join fetch cl.likedBy
       where c.id = :commentId
         and cl.likedBy.id = :likedById
   """)
