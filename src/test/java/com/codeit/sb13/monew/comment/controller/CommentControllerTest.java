@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.codeit.sb13.monew.article.domain.Article;
+import com.codeit.sb13.monew.article.domain.ArticleSource;
 import com.codeit.sb13.monew.comment.service.CommentService;
 import com.codeit.sb13.monew.comment.service.dto.CommentDto;
 import com.codeit.sb13.monew.user.domain.User;
@@ -34,7 +35,8 @@ public class CommentControllerTest {
   @DisplayName("댓글 생성 성공 - GREEN")
   void 댓글_생성_성공() throws Exception {
     // given
-    Article article = new Article("기사 제목", "기사 요약", "https://test.com/article", LocalDateTime.now(), "기사 출처");
+    Article article = Article.create("기사 제목", "기사 요약", "https://test.com/article",
+        LocalDateTime.now(), ArticleSource.NAVER);
     User user = User.builder()
         .email("test@test.com")
         .nickname("사용자 닉네임")

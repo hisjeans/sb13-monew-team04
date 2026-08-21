@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.codeit.sb13.monew.article.domain.Article;
+import com.codeit.sb13.monew.article.domain.ArticleSource;
 import com.codeit.sb13.monew.comment.domain.Comment;
 import com.codeit.sb13.monew.comment.service.CommentLikeService;
 import com.codeit.sb13.monew.comment.service.dto.CommentLikeDto;
@@ -37,7 +38,8 @@ public class CommentLikeControllerTest {
   @DisplayName("댓글 좋아요 등록 성공 - GREEN")
   void 댓글_좋아요_등록() throws Exception {
     // given
-    Article article = new Article("기사 제목", "기사 요약", "https://test.com/article", LocalDateTime.now(), "기사 출처");
+    Article article = Article.create("기사 제목", "기사 요약", "https://test.com/article",
+        LocalDateTime.now(), ArticleSource.NAVER);
     User commentUser = User.builder()
         .email("comment@test.com")
         .nickname("댓글 작성자")

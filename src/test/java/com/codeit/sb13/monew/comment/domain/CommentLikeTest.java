@@ -3,6 +3,7 @@ package com.codeit.sb13.monew.comment.domain;
 import static org.assertj.core.api.Assertions.*;
 
 import com.codeit.sb13.monew.article.domain.Article;
+import com.codeit.sb13.monew.article.domain.ArticleSource;
 import com.codeit.sb13.monew.user.domain.User;
 import java.time.LocalDateTime;
 import org.junit.jupiter.api.Assertions;
@@ -19,7 +20,8 @@ public class CommentLikeTest {
   @DisplayName("댓글 좋아요 생성 성공 - GREEN")
   void 댓글_좋아요_생성_성공() {
     // given
-    Article article = new Article("기사 제목", "기사 요약", "https://test.com/article", LocalDateTime.now(), "기사 출처");
+    Article article = Article.create("기사 제목", "기사 요약", "https://test.com/article",
+        LocalDateTime.now(), ArticleSource.NAVER);
     User commentUser =new User("comment@test.com", "댓글 작성자", "Abcd!");
     User likedBy =new User("like@test.com", "좋아요한 사용자", "Abcd!");
     Comment comment=new Comment(article, commentUser, "테스트 댓글");

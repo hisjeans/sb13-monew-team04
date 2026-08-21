@@ -7,6 +7,7 @@ import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.times;
 
 import com.codeit.sb13.monew.article.domain.Article;
+import com.codeit.sb13.monew.article.domain.ArticleSource;
 import com.codeit.sb13.monew.comment.domain.Comment;
 import com.codeit.sb13.monew.comment.domain.CommentLike;
 import com.codeit.sb13.monew.comment.repository.CommentLikeRepository;
@@ -49,7 +50,8 @@ public class CommentLikeServiceTest {
   void 댓글_좋아요_생성_성공() {
 
     // given
-    Article article = new Article("기사 제목", "기사 요약", "https://test.com/article", LocalDateTime.now(), "기사 출처");
+    Article article = Article.create("기사 제목", "기사 요약", "https://test.com/article",
+        LocalDateTime.now(), ArticleSource.NAVER);
     User commentUser = User.builder()
         .email("comment@test.com")
         .nickname("댓글 작성자")
@@ -76,7 +78,7 @@ public class CommentLikeServiceTest {
 
     given(userRepository.findById(likedBy.getId())).willReturn(java.util.Optional.of(
         likedBy));
-    given(commentRepository.findById(comment.getId())).willReturn(java.util.Optional.of(comment));
+    given(commentRepository.findActiveByIdForUpdate(comment.getId())).willReturn(java.util.Optional.of(comment));
     given(commentLikeRepository.findByCommentAndLikedBy(comment, likedBy)).willReturn(java.util.Optional.empty());
     given(commentLikeRepository.save(any(CommentLike.class))).willAnswer(invocation -> {
       CommentLike commentLike = invocation.getArgument(0);

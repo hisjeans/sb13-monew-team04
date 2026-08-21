@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.*;
 
 import com.codeit.sb13.monew.article.domain.Article;
+import com.codeit.sb13.monew.article.domain.ArticleSource;
 import com.codeit.sb13.monew.article.repository.ArticleRepository;
 import com.codeit.sb13.monew.comment.service.dto.CommentDto;
 import com.codeit.sb13.monew.comment.domain.Comment;
@@ -45,7 +46,8 @@ public class CommentServiceTest {
   @DisplayName("댓글 생성 성공 - GREEN")
   void 댓글_생성_성공() {
     // given
-    Article article = new Article("기사 제목", "기사 요약", "https://test.com/article", LocalDateTime.now(), "기사 출처");
+    Article article = Article.create("기사 제목", "기사 요약", "https://test.com/article",
+        LocalDateTime.now(), ArticleSource.NAVER);
     User user = User.builder()
         .email("test@test.com")
         .nickname("테스트 사용자")
