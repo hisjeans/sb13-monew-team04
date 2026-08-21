@@ -14,6 +14,7 @@ import com.codeit.sb13.monew.user.repository.UserRepository;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
@@ -33,28 +34,31 @@ public class CommentLikeServiceImpl implements CommentLikeService {
   @Override
   public CommentLikeDto likeComment(@Valid CommentLikeRegisterCommand command) {
     log.debug("댓글 좋아요 등록 시작 - 댓글 아이디: {}", command.commentId());
-    Comment comment = commentRepository.findActiveByIdForUpdate(command.commentId()).orElseThrow(()-> new CommentNotFoundException(command.commentId()));
+    Comment comment = commentRepository.findByIdAndDeletedAtIsNull(command.commentId()).orElseThrow(()-> new CommentNotFoundException(command.commentId()));
     User likedBy = userRepository.findById(command.requestUserId()).orElseThrow(()->new UserNotFoundException(command.requestUserId()));
 
     // 중복 좋아요 방지 - 좋아요가 없을 때만 새로 생성, 이미 좋아요가 있을 경우 기존 좋아요 객체 반환
-    return commentLikeRepository.findByCommentAndLikedBy(comment, likedBy)
-        .map(existingLike -> {
-          Long likeCount = commentLikeRepository.countByCommentId(comment.getId());
-          log.debug("이미 존재하는 댓글 좋아요 반환 - 댓글 아이디: {}", comment.getId());
-          return CommentLikeDto.from(existingLike, likeCount);
-        })
+    return commentLikeRepository.findByCommentAndLikedBy(command.commentId(), command.requestUserId())
+        .map(this::toDto)
         .orElseGet(() -> {
-          CommentLike commentLike = CommentLike.builder()
-              .comment(comment)
-              .likedBy(likedBy)
-              .build();
+          try {
+            commentLikeRepository.saveAndFlush(CommentLike.builder()
+                .comment(comment)
+                .likedBy(likedBy)
+                .build());
+            log.info("댓글 좋아요 등록 완료 - 댓글 아이디: {}", comment.getId());
+          } catch (DataIntegrityViolationException e) {
+            log.debug("댓글 좋아요 중복 감지 - 기존 댓글 좋아요 반환 - 댓글 아이디: {}", comment.getId());
+          }
 
-          CommentLike savedCommentLike = commentLikeRepository.save(commentLike);
-          Long likeCount = commentLikeRepository.countByCommentId(comment.getId());
-
-          log.info("댓글 좋아요 등록 완료 - 댓글 아이디: {}, 좋아요 객체 ID: {}",
-              savedCommentLike.getComment().getId(), savedCommentLike.getId());
-          return CommentLikeDto.from(savedCommentLike, likeCount);
+          return commentLikeRepository.findByCommentAndLikedBy(comment.getId(), likedBy.getId())
+              .map(this::toDto)
+              .orElseThrow(()->new IllegalStateException("댓글 좋아요 등록 후 조회 실패 - 댓글 아이디: " + comment.getId()));
         });
+  }
+
+  private CommentLikeDto toDto(CommentLike commentLike) {
+    Long likeCount = commentLikeRepository.countByCommentId(commentLike.getComment().getId());
+    return CommentLikeDto.from(commentLike, likeCount);
   }
 }
