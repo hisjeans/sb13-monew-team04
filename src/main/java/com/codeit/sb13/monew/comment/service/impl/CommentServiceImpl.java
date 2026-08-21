@@ -33,14 +33,14 @@ public class CommentServiceImpl implements CommentService {
   @Transactional
   @Override
   public CommentDto create(@Valid CommentRegisterCommand command) { // 서비스 전용객체를 사용
-    log.debug("댓글 생성 시작 - 사용자 아이디: {}, 기사 아이디: {}, 댓글 내용: {}", command.userId(), command.articleId(), command.content());
+    log.debug("댓글 생성 시작 - 기사 아이디: {}", command.articleId()); // 개인 정보 또는 민감한 정보는 로그에 남기지 않음
     User user = userRepository.findById(command.userId()).orElseThrow(()->new UserNotFoundException(command.userId()));
     Article article = articleRepository.findById(command.articleId()).orElseThrow(()->new ArticleNotFoundException(command.articleId()));
     Comment comment= Comment.builder()
         .article(article).user(user).content(command.content())
         .build();
     Comment savedComment = commentRepository.save(comment);
-    log.info("댓글 생성 완료 - 댓글 아이디: {}, 사용자 아이디: {}, 기사 아이디: {}", savedComment.getId(), savedComment.getUser().getId(), savedComment.getArticle().getId());
+    log.info("댓글 생성 완료 - 댓글 아이디: {}, 기사 아이디: {}", savedComment.getId(), savedComment.getArticle().getId());
     return CommentDto.from(savedComment, 0L, false); // 댓글 생성 직후, 좋아요 수는 0, 좋아요 여부는 false로 반환
   }
 }

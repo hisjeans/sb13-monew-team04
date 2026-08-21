@@ -32,7 +32,7 @@ public class CommentLikeServiceImpl implements CommentLikeService {
   @Transactional
   @Override
   public CommentLikeDto likeComment(@Valid CommentLikeRegisterCommand command) {
-    log.debug("댓글 좋아요 등록 시작 - 댓글 아이디: {}, 요청 사용자 아이디: {}", command.commentId(), command.requestUserId());
+    log.debug("댓글 좋아요 등록 시작 - 댓글 아이디: {}}", command.commentId());
     Comment comment = commentRepository.findActiveByIdForUpdate(command.commentId()).orElseThrow(()-> new CommentNotFoundException(command.commentId()));
     User likedBy = userRepository.findById(command.requestUserId()).orElseThrow(()->new UserNotFoundException(command.requestUserId()));
 
@@ -40,7 +40,7 @@ public class CommentLikeServiceImpl implements CommentLikeService {
     return commentLikeRepository.findByCommentAndLikedBy(comment, likedBy)
         .map(existingLike -> {
           Long likeCount = commentLikeRepository.countByCommentId(comment.getId());
-          log.debug("이미 존재하는 댓글 좋아요 반환 - 댓글 아이디: {}, 요청 사용자 아이디: {}", comment.getId(), likedBy.getId());
+          log.debug("이미 존재하는 댓글 좋아요 반환 - 댓글 아이디: {}", comment.getId());
           return CommentLikeDto.from(existingLike, likeCount);
         })
         .orElseGet(() -> {
@@ -52,8 +52,8 @@ public class CommentLikeServiceImpl implements CommentLikeService {
           CommentLike savedCommentLike = commentLikeRepository.save(commentLike);
           Long likeCount = commentLikeRepository.countByCommentId(comment.getId());
 
-          log.info("댓글 좋아요 등록 완료 - 댓글 아이디: {}, 요청 사용자 아이디: {}, 좋아요 객체 ID: {}",
-              savedCommentLike.getComment().getId(), savedCommentLike.getLikedBy().getId(), savedCommentLike.getId());
+          log.info("댓글 좋아요 등록 완료 - 댓글 아이디: {}, 좋아요 객체 ID: {}",
+              savedCommentLike.getComment().getId(), savedCommentLike.getId());
           return CommentLikeDto.from(savedCommentLike, likeCount);
         });
   }
