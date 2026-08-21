@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 
 import com.codeit.sb13.monew.article.domain.Article;
@@ -20,6 +21,7 @@ import com.codeit.sb13.monew.user.repository.UserRepository;
 import java.time.LocalDateTime;
 import java.util.UUID;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -45,33 +47,46 @@ public class CommentLikeServiceTest {
   @InjectMocks
   CommentLikeServiceImpl commentLikeService;
 
-  @Test
-  @DisplayName("댓글 좋아요 생성 성공 - GREEN")
-  void 댓글_좋아요_생성_성공() {
 
+  private Comment comment;
+  private User likedBy;
+  private User commentUser;
+  private Article article;
+
+
+  @BeforeEach
+  void setUp() {
     // given
-    Article article = Article.create("기사 제목", "기사 요약", "https://test.com/article",
+    article = Article.create("기사 제목", "기사 요약", "https://test.com/article",
         LocalDateTime.now(), ArticleSource.NAVER);
-    User commentUser = User.builder()
+    commentUser = User.builder()
         .email("comment@test.com")
         .nickname("댓글 작성자")
         .password("Abcd!")
         .build();
-    User likedBy = User.builder()
+    likedBy = User.builder()
         .email("like@test.com")
         .nickname("좋아요한 사용자")
         .password("Abcd!")
         .build();
-    Comment comment=Comment.builder()
+    comment=Comment.builder()
         .article(article)
         .user(commentUser)
         .content("테스트 댓글")
         .build();
 
-    ReflectionTestUtils.setField(commentUser, "id", UUID.randomUUID());
-    ReflectionTestUtils.setField(article, "id", UUID.randomUUID());
-    ReflectionTestUtils.setField(comment, "id", UUID.randomUUID());
-    ReflectionTestUtils.setField(likedBy, "id", UUID.randomUUID());
+    ReflectionTestUtils.setField(likedBy, "id", UUID.randomUUID()); // 좋아요 요청한 사용자 객체에 id 필드 설정
+    ReflectionTestUtils.setField(commentUser, "id", UUID.randomUUID()); // 댓글 작성자 객체에 id 필드 설정
+    ReflectionTestUtils.setField(article, "id", UUID.randomUUID()); // 기사 객체에
+    ReflectionTestUtils.setField(comment, "id", UUID.randomUUID()); // 댓글 객체에 id 필드 설정
+  }
+
+
+  @Test
+  @DisplayName("댓글 좋아요 생성 성공 - GREEN")
+  void 댓글_좋아요_생성_성공() {
+
+    // given
     UUID commentLikeId = UUID.randomUUID();
 
     CommentLikeRegisterCommand command=new CommentLikeRegisterCommand(comment.getId(), likedBy.getId());
@@ -110,4 +125,47 @@ public class CommentLikeServiceTest {
         () -> assertThat(result.commentLikeCount()).isEqualTo(1L)
     );
   }
+
+
+  @Test
+  @DisplayName("이미 좋아요한 댓글에 대해 다시 좋아요 요청 시 기존 좋아요 정보 반환 - GREEN")
+  void 중복_좋아요_기존_좋아요_반환() {
+    // given
+    CommentLike existingLike = CommentLike.builder()
+        .comment(comment)
+        .likedBy(likedBy)
+        .build();
+    ReflectionTestUtils.setField(existingLike, "id", UUID.randomUUID());
+
+    CommentLikeRegisterCommand command = new CommentLikeRegisterCommand(comment.getId(), likedBy.getId());
+
+    given(commentRepository.findActiveByIdForUpdate(comment.getId())).willReturn(java.util.Optional.of(comment));
+    given(commentLikeRepository.findByCommentAndLikedBy(comment, likedBy)).willReturn(java.util.Optional.of(existingLike));
+    given(userRepository.findById(likedBy.getId())).willReturn(java.util.Optional.of(likedBy));
+    given(commentLikeRepository.countByCommentId(comment.getId())).willReturn(1L);
+
+    // when
+    CommentLikeDto result = commentLikeService.likeComment(command);
+
+    // then
+    Assertions.assertAll(
+        ()->assertThat(result.id()).isEqualTo(existingLike.getId()),
+        ()->assertThat(result.likedBy()).isEqualTo(likedBy.getId()),
+        ()->assertThat(result.createdAt()).isEqualTo(existingLike.getCreatedAt()),
+        ()->assertThat(result.commentId()).isEqualTo(comment.getId()),
+        ()->assertThat(result.articleId()).isEqualTo(article.getId()),
+        ()->assertThat(result.commentUserId()).isEqualTo(commentUser.getId()),
+        ()->assertThat(result.commentUserNickname()).isEqualTo(commentUser.getNickname()),
+        ()->assertThat(result.commentContent()).isEqualTo(comment.getContent()),
+        ()->assertThat(result.commentLikeCount()).isEqualTo(1L),
+        ()->assertThat(result.commentCreatedAt()).isEqualTo(comment.getCreatedAt())
+    );
+    then(commentRepository).should(times(1)).findActiveByIdForUpdate(comment.getId());
+    then(userRepository).should(times(1)).findById(likedBy.getId());
+    then(commentLikeRepository).should(never()).save(any(CommentLike.class));
+    then(commentLikeRepository).should(times(1)).countByCommentId(comment.getId());
+
+
+  }
+
 }
