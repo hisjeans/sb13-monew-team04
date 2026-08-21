@@ -1,6 +1,5 @@
 package com.codeit.sb13.monew.comment.service.impl;
 
-import com.codeit.sb13.monew.comment.domain.Comment;
 import com.codeit.sb13.monew.comment.domain.CommentLike;
 import com.codeit.sb13.monew.comment.repository.CommentLikeRepository;
 import com.codeit.sb13.monew.comment.repository.CommentRepository;
@@ -9,47 +8,27 @@ import com.codeit.sb13.monew.comment.service.dto.CommentLikeDto;
 import com.codeit.sb13.monew.comment.service.dto.CommentLikeRegisterCommand;
 import com.codeit.sb13.monew.global.exception.comment.CommentNotFoundException;
 import com.codeit.sb13.monew.global.exception.user.UserNotFoundException;
-import com.codeit.sb13.monew.user.domain.User;
 import com.codeit.sb13.monew.user.repository.UserRepository;
-import jakarta.persistence.EntityManager;
 import jakarta.validation.Valid;
 import java.util.UUID;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.TransactionDefinition;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.validation.annotation.Validated;
 
 @Slf4j
 @Validated
 @Service
+@RequiredArgsConstructor
 public class CommentLikeServiceImpl implements CommentLikeService {
 
   private final CommentLikeRepository commentLikeRepository;
   private final CommentRepository commentRepository;
   private final UserRepository userRepository;
-  private final EntityManager entityManager;
-  private final TransactionTemplate likeWriteTransactionTemplate;
-
-  public CommentLikeServiceImpl(CommentLikeRepository commentLikeRepository,
-      CommentRepository commentRepository, UserRepository userRepository,
-      EntityManager entityManager,
-      PlatformTransactionManager transactionManager) {
-    this.commentLikeRepository = commentLikeRepository;
-    this.commentRepository = commentRepository;
-    this.userRepository = userRepository;
-    this.entityManager = entityManager;
-
-    // UNIQUE 제약 조건 위반 시 실패하는 INSERT 트랜잭션만 롤백되도록 REQUIRES_NEW 로 분리
-    this.likeWriteTransactionTemplate = new TransactionTemplate(transactionManager);
-    this.likeWriteTransactionTemplate.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
-  }
+  private final CommentLikeSaveService commentLikeSaveService;
 
   // 댓글, 사용자 존재 여부 확인 -> 기존 좋아요가 없다면 새로운 좋아요 등록, 이미 좋아요가 있다면 기존 좋아요 반환
-  @Transactional
   @Override
   public CommentLikeDto likeComment(@Valid CommentLikeRegisterCommand command) {
     UUID commentId = command.commentId();
@@ -68,11 +47,7 @@ public class CommentLikeServiceImpl implements CommentLikeService {
   // 새로운 트랜잭션으로 댓글 좋아요 등록 시도 -> 동시 중복 요청 발생으로 UNIQUE 제약을 위반하면 기존 좋아요 반환
   private CommentLikeDto createOrReturnExisting(UUID commentId, UUID likedById) {
     try {
-      likeWriteTransactionTemplate.executeWithoutResult(status ->
-        commentLikeRepository.saveAndFlush(CommentLike.builder()
-            .comment(entityManager.getReference(Comment.class, commentId))
-            .likedBy(entityManager.getReference(User.class, likedById))
-            .build()));
+      commentLikeSaveService.create(commentId, likedById);
       log.info("댓글 좋아요 등록 완료 - 댓글 아이디: {}", commentId);
 
     } catch (DataIntegrityViolationException e) {
