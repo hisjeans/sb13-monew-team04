@@ -19,6 +19,7 @@ import com.codeit.sb13.monew.comment.service.impl.CommentLikeServiceImpl;
 import com.codeit.sb13.monew.user.domain.User;
 import com.codeit.sb13.monew.user.repository.UserRepository;
 import java.time.LocalDateTime;
+import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -97,16 +98,26 @@ public class CommentLikeServiceTest {
 
     CommentLikeRegisterCommand command=new CommentLikeRegisterCommand(comment.getId(), likedBy.getId());
 
-    given(userRepository.findById(likedBy.getId())).willReturn(java.util.Optional.of(
+    CommentLike newCommentLike = CommentLike.builder()
+        .comment(comment)
+        .likedBy(likedBy)
+        .build();
+    ReflectionTestUtils.setField(newCommentLike, "id", commentLikeId);
+    ReflectionTestUtils.setField(newCommentLike, "createdAt", likeCreatedAt);
+
+    given(userRepository.findById(likedBy.getId())).willReturn(Optional.of(
         likedBy));
-    given(commentRepository.findActiveByIdForUpdate(comment.getId())).willReturn(java.util.Optional.of(comment));
-    given(commentLikeRepository.findByCommentAndLikedBy(comment, likedBy)).willReturn(java.util.Optional.empty());
-    given(commentLikeRepository.save(any(CommentLike.class))).willAnswer(invocation -> {
-      CommentLike commentLike = invocation.getArgument(0);
-      ReflectionTestUtils.setField(commentLike, "id", commentLikeId);
-      ReflectionTestUtils.setField(commentLike, "createdAt", likeCreatedAt);
-      return commentLike;
-    });
+    given(commentRepository.findByIdAndDeletedAtIsNull(comment.getId())).willReturn(Optional.of(comment));
+
+    given(commentLikeRepository.findByCommentAndLikedBy(comment.getId(), likedBy.getId())).willReturn(Optional.empty(), Optional.of(newCommentLike));
+    // 저장 전 중복 여부 확인 + 저장 후 재조회
+    given(commentLikeRepository.saveAndFlush(any(CommentLike.class))).willAnswer(
+        invocation -> {
+          CommentLike commentLike = invocation.getArgument(0);
+          ReflectionTestUtils.setField(commentLike, "id", commentLikeId);
+          ReflectionTestUtils.setField(commentLike, "createdAt", likeCreatedAt);
+          return commentLike;
+        });
     given(commentLikeRepository.countByCommentId(comment.getId())).willReturn(1L);
 
     // when
@@ -115,8 +126,8 @@ public class CommentLikeServiceTest {
     // then
     ArgumentCaptor<CommentLike> captor = ArgumentCaptor.forClass(CommentLike.class);
 
-    then(commentLikeRepository).should(times(1)).save(captor.capture());
-    then(commentLikeRepository).should(times(1)).findByCommentAndLikedBy(comment, likedBy);
+    then(commentLikeRepository).should(times(1)).saveAndFlush(captor.capture());
+    then(commentLikeRepository).should(times(2)).findByCommentAndLikedBy(comment.getId(), likedBy.getId());
     then(commentLikeRepository).should(times(1)).countByCommentId(comment.getId());
     CommentLike savedCommentLike = captor.getValue();
     Assertions.assertAll(
@@ -149,9 +160,9 @@ public class CommentLikeServiceTest {
 
     CommentLikeRegisterCommand command = new CommentLikeRegisterCommand(comment.getId(), likedBy.getId());
 
-    given(commentRepository.findActiveByIdForUpdate(comment.getId())).willReturn(java.util.Optional.of(comment));
-    given(commentLikeRepository.findByCommentAndLikedBy(comment, likedBy)).willReturn(java.util.Optional.of(existingLike));
-    given(userRepository.findById(likedBy.getId())).willReturn(java.util.Optional.of(likedBy));
+    given(commentRepository.findByIdAndDeletedAtIsNull(comment.getId())).willReturn(Optional.of(comment));
+    given(commentLikeRepository.findByCommentAndLikedBy(comment.getId(), likedBy.getId())).willReturn(Optional.of(existingLike));
+    given(userRepository.findById(likedBy.getId())).willReturn(Optional.of(likedBy));
     given(commentLikeRepository.countByCommentId(comment.getId())).willReturn(1L);
 
     // when
@@ -170,12 +181,10 @@ public class CommentLikeServiceTest {
         ()->assertThat(result.commentLikeCount()).isEqualTo(1L),
         ()->assertThat(result.commentCreatedAt()).isEqualTo(commentCreatedAt)
     );
-    then(commentRepository).should(times(1)).findActiveByIdForUpdate(comment.getId());
+    then(commentRepository).should(times(1)).findByIdAndDeletedAtIsNull(comment.getId());
     then(userRepository).should(times(1)).findById(likedBy.getId());
-    then(commentLikeRepository).should(never()).save(any(CommentLike.class));
+    then(commentLikeRepository).should(times(1)).findByCommentAndLikedBy(comment.getId(), likedBy.getId());
+    then(commentLikeRepository).should(never()).saveAndFlush(any(CommentLike.class));
     then(commentLikeRepository).should(times(1)).countByCommentId(comment.getId());
-
-
   }
-
 }
