@@ -2,6 +2,7 @@ package com.codeit.sb13.monew.comment.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.never;
@@ -18,6 +19,7 @@ import com.codeit.sb13.monew.comment.service.dto.CommentLikeRegisterCommand;
 import com.codeit.sb13.monew.comment.service.impl.CommentLikeServiceImpl;
 import com.codeit.sb13.monew.user.domain.User;
 import com.codeit.sb13.monew.user.repository.UserRepository;
+import jakarta.persistence.EntityManager;
 import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
@@ -31,6 +33,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.SimpleTransactionStatus;
 
 @DisplayName("댓글 좋아요 서비스 - TDD")
 @ExtendWith(MockitoExtension.class)
@@ -47,6 +51,12 @@ public class CommentLikeServiceTest {
 
   @InjectMocks
   CommentLikeServiceImpl commentLikeService;
+
+  @Mock
+  EntityManager entityManager;
+
+  @Mock
+  PlatformTransactionManager transactionManager;
 
   private Comment comment;
   private User likedBy;
@@ -108,6 +118,10 @@ public class CommentLikeServiceTest {
     given(userRepository.findById(likedBy.getId())).willReturn(Optional.of(
         likedBy));
     given(commentRepository.findByIdAndDeletedAtIsNull(comment.getId())).willReturn(Optional.of(comment));
+
+    given(transactionManager.getTransaction(any())).willReturn(new SimpleTransactionStatus());
+    given(entityManager.getReference(Comment.class, comment.getId())).willReturn(comment);
+    given(entityManager.getReference(User.class, likedBy.getId())).willReturn(likedBy);
 
     given(commentLikeRepository.findByCommentAndLikedBy(comment.getId(), likedBy.getId())).willReturn(Optional.empty(), Optional.of(newCommentLike));
     // 저장 전 중복 여부 확인 + 저장 후 재조회
@@ -186,5 +200,10 @@ public class CommentLikeServiceTest {
     then(commentLikeRepository).should(times(1)).findByCommentAndLikedBy(comment.getId(), likedBy.getId());
     then(commentLikeRepository).should(never()).saveAndFlush(any(CommentLike.class));
     then(commentLikeRepository).should(times(1)).countByCommentId(comment.getId());
+
+    // 중복 좋아요 시에는 새로운 트랜잭션을 생성하지 않음
+    then(transactionManager).should(never()).getTransaction(any());
+    then(entityManager).should(never()).getReference(eq(Comment.class), any());
+    then(entityManager).should(never()).getReference(eq(User.class), any());
   }
 }
