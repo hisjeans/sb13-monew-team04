@@ -2,6 +2,7 @@ package com.codeit.sb13.monew.comment.controller;
 
 import com.codeit.sb13.monew.comment.service.dto.CommentLikeDto;
 
+import com.codeit.sb13.monew.global.dto.ApiErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -11,7 +12,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.ErrorResponse;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestHeader;
 
@@ -31,12 +31,12 @@ public interface CommentLikeApi {
       @ApiResponse(
           responseCode = "404",
           description = "댓글 또는 사용자 정보를 찾을 수 없음",
-          content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+          content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
       ),
       @ApiResponse(
           responseCode = "500",
           description = "서버 내부 오류 발생",
-          content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+          content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
       )
   })
   ResponseEntity<CommentLikeDto> likeComment(
