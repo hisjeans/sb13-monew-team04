@@ -47,11 +47,12 @@ public class CommentLikeServiceTest {
   @InjectMocks
   CommentLikeServiceImpl commentLikeService;
 
-
   private Comment comment;
   private User likedBy;
   private User commentUser;
   private Article article;
+  private LocalDateTime commentCreatedAt;
+  private LocalDateTime likeCreatedAt;
 
 
   @BeforeEach
@@ -75,10 +76,15 @@ public class CommentLikeServiceTest {
         .content("테스트 댓글")
         .build();
 
+    // 생성 시각 기대값 고정
+    commentCreatedAt = LocalDateTime.of(2026, 8, 21, 10, 11);
+    likeCreatedAt = LocalDateTime.of(2026, 8, 21, 13, 20);
+
     ReflectionTestUtils.setField(likedBy, "id", UUID.randomUUID()); // 좋아요 요청한 사용자 객체에 id 필드 설정
     ReflectionTestUtils.setField(commentUser, "id", UUID.randomUUID()); // 댓글 작성자 객체에 id 필드 설정
     ReflectionTestUtils.setField(article, "id", UUID.randomUUID()); // 기사 객체에
     ReflectionTestUtils.setField(comment, "id", UUID.randomUUID()); // 댓글 객체에 id 필드 설정
+    ReflectionTestUtils.setField(comment, "createdAt", commentCreatedAt); // 댓글 객체에 createdAt 필드 설정
   }
 
 
@@ -98,6 +104,7 @@ public class CommentLikeServiceTest {
     given(commentLikeRepository.save(any(CommentLike.class))).willAnswer(invocation -> {
       CommentLike commentLike = invocation.getArgument(0);
       ReflectionTestUtils.setField(commentLike, "id", commentLikeId);
+      ReflectionTestUtils.setField(commentLike, "createdAt", likeCreatedAt);
       return commentLike;
     });
     given(commentLikeRepository.countByCommentId(comment.getId())).willReturn(1L);
@@ -117,12 +124,14 @@ public class CommentLikeServiceTest {
         () -> assertThat(savedCommentLike.getLikedBy()).isEqualTo(likedBy),
         () -> assertThat(result.id()).isEqualTo(commentLikeId),
         () -> assertThat(result.likedBy()).isEqualTo(likedBy.getId()),
+        () -> assertThat(result.createdAt()).isEqualTo(likeCreatedAt),
         () -> assertThat(result.commentId()).isEqualTo(comment.getId()),
         () -> assertThat(result.articleId()).isEqualTo(article.getId()),
         () -> assertThat(result.commentUserId()).isEqualTo(commentUser.getId()),
         () -> assertThat(result.commentUserNickname()).isEqualTo("댓글 작성자"),
         () -> assertThat(result.commentContent()).isEqualTo("테스트 댓글"),
-        () -> assertThat(result.commentLikeCount()).isEqualTo(1L)
+        () -> assertThat(result.commentLikeCount()).isEqualTo(1L),
+        () -> assertThat(result.commentCreatedAt()).isEqualTo(commentCreatedAt)
     );
   }
 
@@ -136,6 +145,7 @@ public class CommentLikeServiceTest {
         .likedBy(likedBy)
         .build();
     ReflectionTestUtils.setField(existingLike, "id", UUID.randomUUID());
+    ReflectionTestUtils.setField(existingLike, "createdAt", likeCreatedAt);
 
     CommentLikeRegisterCommand command = new CommentLikeRegisterCommand(comment.getId(), likedBy.getId());
 
@@ -151,14 +161,14 @@ public class CommentLikeServiceTest {
     Assertions.assertAll(
         ()->assertThat(result.id()).isEqualTo(existingLike.getId()),
         ()->assertThat(result.likedBy()).isEqualTo(likedBy.getId()),
-        ()->assertThat(result.createdAt()).isEqualTo(existingLike.getCreatedAt()),
+        ()->assertThat(result.createdAt()).isEqualTo(likeCreatedAt),
         ()->assertThat(result.commentId()).isEqualTo(comment.getId()),
         ()->assertThat(result.articleId()).isEqualTo(article.getId()),
         ()->assertThat(result.commentUserId()).isEqualTo(commentUser.getId()),
         ()->assertThat(result.commentUserNickname()).isEqualTo(commentUser.getNickname()),
         ()->assertThat(result.commentContent()).isEqualTo(comment.getContent()),
         ()->assertThat(result.commentLikeCount()).isEqualTo(1L),
-        ()->assertThat(result.commentCreatedAt()).isEqualTo(comment.getCreatedAt())
+        ()->assertThat(result.commentCreatedAt()).isEqualTo(commentCreatedAt)
     );
     then(commentRepository).should(times(1)).findActiveByIdForUpdate(comment.getId());
     then(userRepository).should(times(1)).findById(likedBy.getId());
