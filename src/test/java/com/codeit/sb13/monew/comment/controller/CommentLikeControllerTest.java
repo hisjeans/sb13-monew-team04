@@ -61,7 +61,7 @@ public class CommentLikeControllerTest {
     ReflectionTestUtils.setField(article, "id", UUID.randomUUID()); // 기사 객체에
     ReflectionTestUtils.setField(comment, "id", UUID.randomUUID()); // 댓글 객체에 id 필드 설정
 
-    LocalDateTime commentCreatedAt = LocalDateTime.now();
+    LocalDateTime commentCreatedAt = LocalDateTime.of(2026, 6, 1, 12, 3, 5, 367_000_000); // 댓글 생성 시간 설정
     ReflectionTestUtils.setField(comment, "createdAt", commentCreatedAt); // 댓글 객체에 createdAt 필드 설정
 
     CommentLikeDto response=new CommentLikeDto(
