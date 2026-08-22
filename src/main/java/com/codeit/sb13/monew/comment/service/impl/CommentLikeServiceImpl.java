@@ -51,11 +51,12 @@ public class CommentLikeServiceImpl implements CommentLikeService {
       log.info("댓글 좋아요 등록 완료 - 댓글 아이디: {}", commentId);
 
     } catch (DataIntegrityViolationException e) {
-      log.debug("댓글 좋아요 중복 감지 -> 기존 댓글 좋아요 반환 - 댓글 아이디: {}", commentId);
-
       return commentLikeRepository.findByCommentAndLikedBy(commentId, likedById)
-            .map(this::toDto)
-            .orElseThrow(()->e);
+          .map(existingLike -> {
+            log.debug("댓글 좋아요 중복 감지 -> 기존 댓글 좋아요 반환 - 댓글 아이디: {}", commentId);
+            return toDto(existingLike);
+          })
+          .orElseThrow(() -> e);
     }
 
     return commentLikeRepository.findByCommentAndLikedBy(commentId, likedById)
